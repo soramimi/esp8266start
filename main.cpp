@@ -67,17 +67,22 @@ void print_lines(std::vector<std::string> const *lines)
 	}
 }
 
+bool containsOK(std::vector<std::string> const *lines)
+{
+	for (std::string const &line : *lines) {
+		if (line == "OK") {
+			return true;
+		}
+	}
+	return false;
+}
+
 bool esp_run_command_(serial_handle_t handle, std::string const &command, std::vector<std::string> *lines)
 {
 	lines->clear();
 	esp_send_command(handle, command);
 	esp_recv_response(handle, lines);
-	if (lines->size() >= 2 && lines->front() == command && lines->back() == "OK") {
-		lines->pop_back();
-		lines->erase(lines->begin());
-		return true;
-	}
-	return false;
+	return containsOK(lines);
 }
 
 bool esp_run_command(serial_handle_t handle, std::string const &command, std::vector<std::string> *lines, int retry = 3)
@@ -173,6 +178,7 @@ static bool esp_get_mac_address_(serial_handle_t handle, std::string const &cmd,
 	*out = mac_address_t();
 	std::vector<std::string> lines;
 	if (esp_run_command(handle, cmd, &lines)) {
+		print_lines(&lines);
 		std::string t;
 		if (lookup(&lines, key, &t)) {
 			t = trim_quot(t);
@@ -212,10 +218,12 @@ int main(int argc, char **argv)
 
 		mac_address_t stmac;
 		esp_get_st_mac_address(handle, &stmac);
-		puts(("ST " + to_s(stmac)).c_str());
 
 		mac_address_t apmac;
 		esp_get_ap_mac_address(handle, &apmac);
+
+		puts("---");
+		puts(("ST " + to_s(stmac)).c_str());
 		puts(("AP " + to_s(apmac)).c_str());
 
 		serial_close(handle, &opt);
